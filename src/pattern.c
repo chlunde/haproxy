@@ -2643,53 +2643,27 @@ int pattern_delete(struct pattern_expr *expr, struct pat_ref_elt *ref)
 	return 1;
 }
 
-/* This function finalize the configuration parsing. Its set all the
+/* This function finalize the configuration parsing. It sets all the
  * automatic ids
  */
 void pattern_finalize_config(void)
 {
-	int i = 0;
-	struct pat_ref *ref, *ref2, *ref3;
-	struct list pr = LIST_HEAD_INIT(pr);
+	int next_unique_id = 0;
+	struct pat_ref *ref;
 
 	pat_lru_seed = random();
 
+	/* Find next unique_id (custom ids may be set with -u) */
 	list_for_each_entry(ref, &pattern_reference, list) {
-		if (ref->unique_id == -1) {
-			/* Look for the first free id. */
-			while (1) {
-				list_for_each_entry(ref2, &pattern_reference, list) {
-					if (ref2->unique_id == i) {
-						i++;
-						break;
-					}
-				}
-				if (&ref2->list == &pattern_reference)
-					break;
-			}
-
-			/* Uses the unique id and increment it for the next entry. */
-			ref->unique_id = i;
-			i++;
-		}
+		if (ref->unique_id >= next_unique_id)
+			next_unique_id = ref->unique_id + 1;
 	}
 
-	/* This sort the reference list by id. */
-	list_for_each_entry_safe(ref, ref2, &pattern_reference, list) {
-		LIST_DEL(&ref->list);
-		list_for_each_entry(ref3, &pr, list) {
-			if (ref->unique_id < ref3->unique_id) {
-				LIST_ADDQ(&ref3->list, &ref->list);
-				break;
-			}
-		}
-		if (&ref3->list == &pr)
-			LIST_ADDQ(&pr, &ref->list);
+	/* Set automatic ids when required */
+	list_for_each_entry(ref, &pattern_reference, list) {
+		if (ref->unique_id == -1)
+			ref->unique_id = next_unique_id++;
 	}
-
-	/* swap root */
-	LIST_ADD(&pr, &pattern_reference);
-	LIST_DEL(&pr);
 }
 
 static int pattern_per_thread_lru_alloc()
