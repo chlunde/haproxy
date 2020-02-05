@@ -431,6 +431,11 @@ struct acl_expr *parse_acl_expr(const char **args, char **err, struct arg_list *
 				goto out_free_expr;
 			}
 
+			if (unique_id < 0 || unique_id >= (INT_MAX >> 1)) {
+				memprintf(err, "the argument of -u must a positive integer less than %d", INT_MAX>>1);
+				goto out_free_expr;
+			}
+
 			/* Check if this id is really unique. */
 			if (pat_ref_lookupid(unique_id)) {
 				memprintf(err, "the id is already used");
